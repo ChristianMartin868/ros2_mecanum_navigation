@@ -1,95 +1,99 @@
 # ros2_mecanum_navigation
 
-ROS-2-Node für **Korridor-/Wandfolge per Zweipunktregelung (Bang-Bang)** eines
-Mecanum-Roboters auf Basis von 8 ToF-Abstandssensoren. **Portierung** des
-ROS-1-Studienprojekts aus dem Modul *Autonome Systeme* (2020).
+ROS 2 node for **corridor / wall following with two-point (bang-bang) control**
+of a mecanum robot, based on 8 ToF distance sensors. **Port** of the ROS 1
+study project from the *Autonomous Systems* module (2020).
 
-> Verwendet die **ROS 2**-API (`rclcpp`, `rclcpp::Node`, Wall-Timer).
-> Gebaut mit `ament_cmake` / `colcon`.
+> Uses the **ROS 2** API (`rclcpp`, `rclcpp::Node`, wall timer).
+> Built with `ament_cmake` / `colcon`.
 
-## Funktionsweise
+## How it works
 
 `src/mecanum_navigation_node.cpp`:
 
-- Abonniert `robot1/tof` (`std_msgs/msg/Float32MultiArray`) → speichert die
-  Sensorwerte in `tof[0..7]`.
-- Veröffentlicht mit **100 Hz** `geometry_msgs/msg/Twist` auf `robot1/cmd_vel`.
-- Fährt konstant vorwärts (`linear.x = 1.5`).
-- **Zweipunktregelung:** Stellgröße `e = (tof[4]−tof[5]) + (tof[2]−tof[3])`
-  - `e < 0` → `angular.z = −0.7` (nach rechts),
-  - `e > 0` → `angular.z = +0.7` (nach links),
-  - `e == 0` → keine Drehung.
+- Subscribes to `robot1/tof` (`std_msgs/msg/Float32MultiArray`) → stores the
+  sensor values in `tof[0..7]`.
+- Publishes `geometry_msgs/msg/Twist` on `robot1/cmd_vel` at **100 Hz**.
+- Drives forward at a constant speed (`linear.x = 1.5`).
+- **Two-point control:** control value `e = (tof[4]−tof[5]) + (tof[2]−tof[3])`
+  - `e < 0` → `angular.z = −0.7` (turn right),
+  - `e > 0` → `angular.z = +0.7` (turn left),
+  - `e == 0` → no rotation.
 
-  Damit werden zwei seitliche Sensorpaare ausbalanciert (links vs. rechts), der
-  Roboter hält sich mittig im Gang bzw. folgt einer Wand.
+  This balances the two lateral sensor pairs (left vs. right), so the robot
+  stays centred in the corridor / follows a wall.
 
 ## Topics
 
-| Richtung | Topic            | Typ                            |
-|----------|------------------|--------------------------------|
-| sub      | `robot1/tof`     | `std_msgs/msg/Float32MultiArray` |
-| pub      | `robot1/cmd_vel` | `geometry_msgs/msg/Twist`      |
+| Direction | Topic            | Type                             |
+|-----------|------------------|----------------------------------|
+| sub       | `robot1/tof`     | `std_msgs/msg/Float32MultiArray` |
+| pub       | `robot1/cmd_vel` | `geometry_msgs/msg/Twist`        |
 
-## Bauen & Ausführen
+## Build & run
 
-In einem colcon-Workspace (z. B. ROS 2 Humble / Jazzy):
+In a colcon workspace (e.g. ROS 2 Humble / Jazzy):
 
 ```bash
-# Repo nach <ws>/src/ klonen, dann im Workspace-Root:
+# Clone the repo into <ws>/src/, then from the workspace root:
 colcon build --packages-select ros2_mecanum_navigation
 source install/setup.bash
 ros2 run ros2_mecanum_navigation mecanum_navigation_node
 ```
 
-Testweise ToF-Daten einspeisen (8 Werte):
+Feed in test ToF data (8 values):
 
 ```bash
 ros2 topic pub /robot1/tof std_msgs/msg/Float32MultiArray "{data: [1,1,1,0,1,0,1,1]}"
-# und cmd_vel beobachten:
+# and watch cmd_vel:
 ros2 topic echo /robot1/cmd_vel
 ```
 
-Abhängigkeiten: ROS 2 mit `geometry_msgs`, `std_msgs`, `rclcpp`.
+Dependencies: ROS 2 with `geometry_msgs`, `std_msgs`, `rclcpp`.
 
-## Simulator (Demo)
+## Simulator (demo)
 
-`scripts/mecanum_sim.py` (Executable `mecanum_sim`) ist ein eigenständiger
-2D-PyGame-Simulator: äußere Wand + innere rechteckige Wand, Roboter im Korridor
-dazwischen. Er berechnet 8 ToF-Abstände per Ray-Casting gegen die Wände
-(`robot1/tof`) und integriert `robot1/cmd_vel` zur Pose. Zusammen mit der
-C++-Node schließt sich der Regelkreis und der Roboter umrundet die innere Wand.
+`scripts/mecanum_sim.py` (executable `mecanum_sim`) is a standalone 2D PyGame
+simulator: an outer wall plus an inner rectangular wall, with the robot in the
+corridor between them. It computes 8 ToF distances by ray casting against the
+walls (`robot1/tof`) and integrates `robot1/cmd_vel` into a pose. Together with
+the C++ node the control loop closes and the robot circles the inner wall.
 
-Sensor-Index-Layout (Winkel relativ zur Fahrtrichtung):
-`0` vorne, `1` hinten, `2` +45°, `3` −45°, `4` +90°, `5` −90°, `6` +135°,
-`7` −135°. Der Controller nutzt `e = (tof[4]−tof[5]) + (tof[2]−tof[3])`.
+It also visualises the controller: a fading trail of the path, an HUD (`v`, `ω`,
+the control value `e`, turn direction, FPS), colour-coded sensor rays (the left
+pair green, the right pair red, the rest dimmed) and live left/right balance
+bars. The window auto-sizes to the screen height.
 
-Benötigt PyGame: `sudo apt install -y python3-pygame`.
+Sensor index layout (angle relative to heading):
+`0` front, `1` back, `2` +45°, `3` −45°, `4` +90°, `5` −90°, `6` +135°,
+`7` −135°. The controller uses `e = (tof[4]−tof[5]) + (tof[2]−tof[3])`.
 
-Start in zwei Terminals (in beiden vorher `source install/setup.bash`):
+Requires PyGame: `sudo apt install -y python3-pygame`.
+
+Start in two terminals (run `source install/setup.bash` in both first):
 
 ```bash
-# Terminal 1: Simulator (öffnet das PyGame-Fenster, ESC beendet)
+# Terminal 1: simulator (opens the PyGame window, ESC quits)
 ros2 run ros2_mecanum_navigation mecanum_sim
 
-# Terminal 2: Controller
+# Terminal 2: controller
 ros2 run ros2_mecanum_navigation mecanum_navigation_node
 ```
 
-Headless testen (ohne Fenster): `export SDL_VIDEODRIVER=dummy` vor dem
-`ros2 run mecanum_sim` setzen; die Pose wird dann im Log mitgeschrieben.
+Headless test (no window): set `export SDL_VIDEODRIVER=dummy` before
+`ros2 run mecanum_sim`; the pose is then written to the log.
 
-## Unterschiede zum ROS-1-Original
+## Differences from the ROS 1 original
 
-- `ros::init` + globale `NodeHandle`/Publisher → `rclcpp::init` +
-  `rclcpp::Node`-Subklasse mit Member-Publisher/-Subscriber.
+- `ros::init` + global `NodeHandle`/publisher → `rclcpp::init` +
+  `rclcpp::Node` subclass with member publisher/subscriber.
 - `n.subscribe` / `n.advertise` → `create_subscription` / `create_publisher`.
 - `std_msgs::Float32MultiArray` / `geometry_msgs::Twist` → `…::msg::…`
-  (Header `…/msg/*.hpp`); `ConstPtr` → `…::SharedPtr`.
-- `while(ros::ok()) { … ros::spinOnce(); loop_rate.sleep(); }` mit
+  (headers `…/msg/*.hpp`); `ConstPtr` → `…::SharedPtr`.
+- `while(ros::ok()) { … ros::spinOnce(); loop_rate.sleep(); }` with
   `ros::Rate(100)` → `create_wall_timer(10ms, …)` + `rclcpp::spin`.
-- Globaler `float tof[8]` → Member `std::array<float, 8>` (null-initialisiert).
-- ToF-Kopierschleife: jetzt mit Bounds-Schutz (`std::min(data.size(), 8)`),
-  damit ein zu großes Array keinen Pufferüberlauf verursacht. Verhalten sonst
-  identisch.
-- Ungenutzter Include `geometry_msgs/Pose.h` aus dem Original entfernt.
+- Global `float tof[8]` → member `std::array<float, 8>` (zero-initialised).
+- ToF copy loop: now bounds-checked (`std::min(data.size(), 8)`) so an
+  oversized array cannot overflow the buffer. Behaviour otherwise identical.
+- Removed the unused `geometry_msgs/Pose.h` include from the original.
 - Build: catkin → ament_cmake (`package.xml` format 3, `ament_package`).
