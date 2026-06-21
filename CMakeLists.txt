@@ -16,6 +16,11 @@ ament_target_dependencies(mecanum_navigation_node rclcpp geometry_msgs std_msgs)
 install(TARGETS mecanum_navigation_node
   DESTINATION lib/${PROJECT_NAME})
 
+# Python simulator node (PyGame). Installed as executable "mecanum_sim".
+install(PROGRAMS scripts/mecanum_sim.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME mecanum_sim)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
