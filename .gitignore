@@ -1,0 +1,14 @@
+# colcon / ament build output
+build/
+install/
+log/
+*.o
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
