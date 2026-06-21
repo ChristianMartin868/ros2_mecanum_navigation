@@ -51,6 +51,33 @@ ros2 topic echo /robot1/cmd_vel
 
 Abhängigkeiten: ROS 2 mit `geometry_msgs`, `std_msgs`, `rclcpp`.
 
+## Simulator (Demo)
+
+`scripts/mecanum_sim.py` (Executable `mecanum_sim`) ist ein eigenständiger
+2D-PyGame-Simulator: äußere Wand + innere rechteckige Wand, Roboter im Korridor
+dazwischen. Er berechnet 8 ToF-Abstände per Ray-Casting gegen die Wände
+(`robot1/tof`) und integriert `robot1/cmd_vel` zur Pose. Zusammen mit der
+C++-Node schließt sich der Regelkreis und der Roboter umrundet die innere Wand.
+
+Sensor-Index-Layout (Winkel relativ zur Fahrtrichtung):
+`0` vorne, `1` hinten, `2` +45°, `3` −45°, `4` +90°, `5` −90°, `6` +135°,
+`7` −135°. Der Controller nutzt `e = (tof[4]−tof[5]) + (tof[2]−tof[3])`.
+
+Benötigt PyGame: `sudo apt install -y python3-pygame`.
+
+Start in zwei Terminals (in beiden vorher `source install/setup.bash`):
+
+```bash
+# Terminal 1: Simulator (öffnet das PyGame-Fenster, ESC beendet)
+ros2 run ros2_mecanum_navigation mecanum_sim
+
+# Terminal 2: Controller
+ros2 run ros2_mecanum_navigation mecanum_navigation_node
+```
+
+Headless testen (ohne Fenster): `export SDL_VIDEODRIVER=dummy` vor dem
+`ros2 run mecanum_sim` setzen; die Pose wird dann im Log mitgeschrieben.
+
 ## Unterschiede zum ROS-1-Original
 
 - `ros::init` + globale `NodeHandle`/Publisher → `rclcpp::init` +
