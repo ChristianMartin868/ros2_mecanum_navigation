@@ -29,15 +29,19 @@ from geometry_msgs.msg import Twist
 
 import pygame
 
-# --- World geometry (pixels) ------------------------------------------------
-WIDTH, HEIGHT = 800, 800
-SCALE = 50.0  # pixels per metre
-MAX_RANGE_PX = 500.0  # ToF max range
-ROBOT_RADIUS = 12.0
+# --- World geometry ---------------------------------------------------------
+# The verified layout below is the original 800px scene; change WIN to rescale
+# the whole scene uniformly (keeps proportions, and thus the behaviour).
+WIN = 700
+_f = WIN / 800.0           # uniform scale factor
+WIDTH = HEIGHT = WIN
+SCALE = 50.0 * _f          # pixels per metre
+MAX_RANGE_PX = 500.0 * _f  # ToF max range
+ROBOT_RADIUS = 12.0 * _f
 
 # Outer wall (inside of the border) and inner wall, as rectangles.
-OUTER = pygame.Rect(50, 50, 700, 700)      # x, y, w, h
-INNER = pygame.Rect(275, 275, 250, 250)
+OUTER = pygame.Rect(round(50 * _f), round(50 * _f), round(700 * _f), round(700 * _f))
+INNER = pygame.Rect(round(275 * _f), round(275 * _f), round(250 * _f), round(250 * _f))
 
 # Sensor angle offsets relative to robot heading (radians).
 SENSOR_OFFSETS = [
@@ -97,8 +101,8 @@ class MecanumSim(Node):
         super().__init__('mecanum_sim')
 
         # Robot pose (pixels, radians). Start in the left corridor heading up.
-        self.x = 160.0
-        self.y = 400.0
+        self.x = 160.0 * _f
+        self.y = 400.0 * _f
         self.theta = -math.pi / 2.0
         self.vx = 0.0
         self.vy = 0.0
